@@ -1,3 +1,4 @@
+import { getArtwork } from '../data/characterArtwork';
 import React, { useState, useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import { Rarity, CharacterItem } from '../types/game';
@@ -7,6 +8,7 @@ import {
   getTrainingCost,
   getLimitBreakCost,
   ProgressionStats,
+  SOUL_AWAKENING_CONFIG,
 } from '../logic/characterProgression';
 import {
   Check,
@@ -25,15 +27,29 @@ import {
   ChevronRight,
   Coins,
   Gem,
+  Award,
+  Atom,
+  RefreshCw,
+  Plus,
 } from 'lucide-react';
 
 export const CharacterRoster: React.FC = () => {
-  const { player, characters, equipCharacter, trainWarrior, limitBreakWarrior } = useGame();
+  const {
+    player,
+    characters,
+    equipCharacter,
+    trainWarrior,
+    limitBreakWarrior,
+    soulAwakenWarrior,
+    addDuplicateWarrior,
+  } = useGame();
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'bp' | 'level' | 'rarity' | 'atk' | 'hp'>('bp');
   const [selectedWarrior, setSelectedWarrior] = useState<CharacterItem | null>(null);
+  const [awakeningWarrior, setAwakeningWarrior] = useState<CharacterItem | null>(null);
   const [trainingFeedback, setTrainingFeedback] = useState<string | null>(null);
+  const [isAwakeningVfx, setIsAwakeningVfx] = useState(false);
 
   const rarityTiers: { id: Rarity; label: string; badgeColor: string }[] = [
     { id: 'omni', label: 'Omni Kings', badgeColor: 'border-cyan-400 text-cyan-300 bg-cyan-950/80' },
@@ -249,17 +265,29 @@ export const CharacterRoster: React.FC = () => {
                   const style = RARITY_COLORS[char.rarity];
                   const prog = computeWarriorProgression(char);
 
+                  const isAwakened = (prog.soulAwakeningTier || 0) > 0;
+                  const awakeningInfo = isAwakened ? SOUL_AWAKENING_CONFIG[prog.soulAwakeningTier] : null;
+                  const isAwakenEligible = ['legendary', 'mythical', 'sp_plus', 'omni'].includes(char.rarity);
+                  const duplicateCount = Math.max(0, (char.copies || 1) - 1);
+
                   return (
                     <div
                       key={char.name}
-                      className={`p-4 rounded-xl border flex flex-col justify-between transition-all hover:scale-[1.02] ${style.bg} ${style.border} ${
-                        char.rarity === 'omni'
+                      className={`p-4 rounded-xl border flex flex-col justify-between transition-all duration-300 relative overflow-hidden ${style.bg} ${style.border} ${
+                        isAwakened && awakeningInfo ? awakeningInfo.cardAuraClass : ''
+                      } ${
+                        char.rarity === 'omni' && !isAwakened
                           ? 'omni-glow'
-                          : char.rarity === 'sp_plus'
+                          : char.rarity === 'sp_plus' && !isAwakened
                           ? 'ring-1 ring-amber-400 shadow-[0_0_22px_rgba(245,158,11,0.35)]'
                           : ''
                       } ${isEquipped ? 'ring-2 ring-amber-400 shadow-lg' : ''}`}
                     >
+                      {/* Glowing Aura Light Beams (VFX) */}
+                      {isAwakened && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-current to-transparent opacity-10 pointer-events-none animate-pulse"></div>
+                      )}
+
                       <div>
                         {/* Header: Rarity + Level & BP */}
                         <div className="flex items-center justify-between">
@@ -278,18 +306,70 @@ export const CharacterRoster: React.FC = () => {
                           </div>
                         </div>
 
+                        {/* Character Visual Artwork Avatar */}
+                        {(() => {
+                          const art = getArtwork(char.name, 'warrior');
+                          return (
+                            <div className="flex items-center gap-3 my-2.5">
+                              <div className={`relative w-12 h-12 rounded-xl overflow-hidden border ${isAwakened ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-lg shadow-amber-400/20' : 'border-slate-700/80'} shrink-0 bg-slate-950`}>
+                                <img
+                                  src={art.avatarUrl}
+                                  alt={char.name}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-heading font-black text-sm text-white truncate">
+                                  {char.name}
+                                </h3>
+                                <div className="text-[10px] text-slate-400 truncate">
+                                  {char.series || 'Multiverse Legend'}
+                                </div>
+                                <div className="text-[10px] text-amber-400 font-mono font-bold">
+                                  BP {prog.battlePower.toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                         {/* Name & Scouter Battle Power */}
-                        <h3 className="font-heading font-black text-base text-white mt-2 leading-tight">
-                          {char.name}
+                        <h3 className="font-heading font-black text-base text-white mt-2 leading-tight flex items-center justify-between gap-1">
+                          <span className="truncate">{char.name}</span>
+                          {isAwakened && (
+                            <span className="text-[10px] font-black text-amber-300 flex items-center gap-0.5 flex-shrink-0 animate-bounce">
+                              <Sparkles className="w-3 h-3 text-amber-400" />
+                              <span>T{prog.soulAwakeningTier}</span>
+                            </span>
+                          )}
                         </h3>
 
-                        <div className="flex items-center gap-1.5 mt-1">
+                        {/* Awakening & Duplicate Badges */}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
                           <span className="text-xs font-black text-amber-300">
                             ⚡ BP: {prog.battlePower.toLocaleString()}
                           </span>
                           {prog.limitBreakTier > 0 && (
                             <span className="text-[9px] font-black text-purple-300 bg-purple-950/80 px-1 rounded border border-purple-500/40">
                               ★ LB{prog.limitBreakTier}
+                            </span>
+                          )}
+                          {isAwakened && awakeningInfo && (
+                            <span
+                              className="text-[9px] font-black px-1.5 py-0.5 rounded border shadow-sm"
+                              style={{
+                                borderColor: awakeningInfo.colorHex,
+                                color: awakeningInfo.colorHex,
+                                backgroundColor: 'rgba(0,0,0,0.6)',
+                              }}
+                            >
+                              {awakeningInfo.name}
+                            </span>
+                          )}
+                          {isAwakenEligible && (
+                            <span className="text-[9px] font-bold text-sky-300 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-500/30">
+                              ⚛ {duplicateCount} Duplicate Soul{duplicateCount === 1 ? '' : 's'}
                             </span>
                           )}
                         </div>
@@ -337,34 +417,46 @@ export const CharacterRoster: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Action buttons: Train & Equip */}
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => setSelectedWarrior(char)}
-                          className="py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400 cursor-pointer transition"
-                        >
-                          <Dumbbell className="w-3.5 h-3.5" />
-                          <span>Train</span>
-                        </button>
+                      {/* Action buttons: Soul Awaken, Train, Equip */}
+                      <div className="mt-4 space-y-1.5">
+                        {isAwakenEligible && (
+                          <button
+                            onClick={() => setAwakeningWarrior(char)}
+                            className="w-full py-1.5 text-xs font-black rounded-lg flex items-center justify-center gap-1.5 bg-gradient-to-r from-purple-700 via-pink-600 to-amber-500 hover:from-purple-600 hover:to-amber-400 text-white shadow-md hover:shadow-purple-500/30 cursor-pointer transition"
+                          >
+                            <Atom className="w-3.5 h-3.5 text-amber-200" />
+                            <span>Soul Awakening (Tier {prog.soulAwakeningTier}/5)</span>
+                          </button>
+                        )}
 
-                        <button
-                          onClick={() => equipCharacter(char.name)}
-                          disabled={isEquipped}
-                          className={`py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1 transition ${
-                            isEquipped
-                              ? "bg-amber-500 text-slate-950 font-black cursor-default"
-                              : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-amber-400 cursor-pointer"
-                          }`}
-                        >
-                          {isEquipped ? (
-                            <>
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Equipped</span>
-                            </>
-                          ) : (
-                            <span>Equip</span>
-                          )}
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setSelectedWarrior(char)}
+                            className="py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400 cursor-pointer transition"
+                          >
+                            <Dumbbell className="w-3.5 h-3.5" />
+                            <span>Train</span>
+                          </button>
+
+                          <button
+                            onClick={() => equipCharacter(char.name)}
+                            disabled={isEquipped}
+                            className={`py-1.5 text-xs font-bold rounded-lg flex items-center justify-center gap-1 transition ${
+                              isEquipped
+                                ? "bg-amber-500 text-slate-950 font-black cursor-default"
+                                : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-amber-400 cursor-pointer"
+                            }`}
+                          >
+                            {isEquipped ? (
+                              <>
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Equipped</span>
+                              </>
+                            ) : (
+                              <span>Equip</span>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -579,6 +671,235 @@ export const CharacterRoster: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Soul Awakening Altar Modal */}
+      {awakeningWarrior && (() => {
+        const liveChar = characters.find(c => c.name === awakeningWarrior.name) || awakeningWarrior;
+        const curTier = liveChar.soulAwakeningTier || 0;
+        const nextTier = curTier + 1;
+        const curConfig = SOUL_AWAKENING_CONFIG[curTier];
+        const nextConfig = SOUL_AWAKENING_CONFIG[nextTier];
+        const currentCopies = liveChar.copies || 1;
+        const availableDuplicates = currentCopies - 1;
+        const canAwaken = nextConfig && availableDuplicates >= nextConfig.duplicatesRequired && player.crystals >= nextConfig.crystalsRequired;
+
+        const handleAwaken = () => {
+          setIsAwakeningVfx(true);
+          const res = soulAwakenWarrior(liveChar.name);
+          setTrainingFeedback(res.message);
+          setTimeout(() => setIsAwakeningVfx(false), 1200);
+          setTimeout(() => setTrainingFeedback(null), 4500);
+        };
+
+        const handleAddTestDuplicate = () => {
+          addDuplicateWarrior(liveChar.name, 1);
+          setTrainingFeedback(`Added +1 Duplicate Soul Shard for ${liveChar.name}! Total Duplicates: ${availableDuplicates + 1}`);
+          setTimeout(() => setTrainingFeedback(null), 3000);
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md animate-fade-in">
+            {/* Visual Screen Flash when Awakening occurs */}
+            {isAwakeningVfx && (
+              <div
+                className="fixed inset-0 z-60 pointer-events-none animate-ping opacity-60"
+                style={{ backgroundColor: nextConfig?.colorHex || '#f59e0b' }}
+              />
+            )}
+
+            <div
+              className={`bg-slate-900 border-2 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative overflow-hidden transition-all duration-500 ${
+                curConfig ? curConfig.glowClass : 'border-purple-500/40'
+              }`}
+            >
+              {/* Animated Cosmic Nebula Aura Background */}
+              <div className="absolute -top-24 -right-24 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+              <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-pink-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+              {/* Modal Header */}
+              <div className="flex items-start justify-between border-b border-slate-800 pb-3 relative z-10">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      <Atom className="w-4 h-4 animate-spin" />
+                    </span>
+                    <span className="text-xs font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-amber-300">
+                      Soul Awakening Altar
+                    </span>
+                  </div>
+                  <h3 className="text-2xl font-black font-heading text-white mt-1 flex items-center gap-2">
+                    <span>{liveChar.name}</span>
+                    <span className="text-xs text-slate-400 font-normal">({liveChar.rarity.toUpperCase()})</span>
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setAwakeningWarrior(null)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {trainingFeedback && (
+                <div className="p-3 rounded-xl bg-purple-950/60 border border-purple-500/40 text-purple-200 text-xs font-bold relative z-10">
+                  {trainingFeedback}
+                </div>
+              )}
+
+              {/* Character Awakening Spotlight Preview */}
+              <div
+                className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10 ${
+                  curConfig ? curConfig.cardAuraClass : 'bg-slate-950/60 border-slate-800'
+                }`}
+              >
+                <div className="space-y-1 text-center sm:text-left">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Current Soul Awakening Status
+                  </div>
+                  <div className="text-xl font-black font-heading text-white flex items-center justify-center sm:justify-start gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                    <span>{curConfig ? curConfig.name : 'Dormant Soul (Tier 0)'}</span>
+                  </div>
+                  <div className="text-xs text-purple-300 font-semibold">
+                    {curConfig ? curConfig.auraTitle : 'Awaken to unlock divine Ki aura radiance!'}
+                  </div>
+                </div>
+
+                {/* Duplicates Owned Pill */}
+                <div className="bg-slate-950/80 border border-slate-700/80 p-3 rounded-xl text-center min-w-[160px]">
+                  <div className="text-[10px] text-slate-400 font-bold uppercase">Available Duplicate Souls</div>
+                  <div className="text-2xl font-black text-sky-300 font-heading mt-0.5">
+                    ⚛ {availableDuplicates}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    ({currentCopies} total copies owned)
+                  </div>
+                </div>
+              </div>
+
+              {/* 5-Tier Soul Awakening Track */}
+              <div className="space-y-2 relative z-10">
+                <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Soul Awakening Ascension Ladder
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                  {[1, 2, 3, 4, 5].map(t => {
+                    const conf = SOUL_AWAKENING_CONFIG[t];
+                    const isPassed = curTier >= t;
+                    const isNext = curTier + 1 === t;
+
+                    return (
+                      <div
+                        key={t}
+                        className={`p-2.5 rounded-xl border text-center transition ${
+                          isPassed
+                            ? 'bg-purple-950/40 border-purple-400/80 text-white shadow-md'
+                            : isNext
+                            ? 'bg-slate-950/80 border-amber-400 ring-1 ring-amber-400 text-amber-200'
+                            : 'bg-slate-950/40 border-slate-800 text-slate-500 opacity-60'
+                        }`}
+                      >
+                        <div className="text-[10px] font-black uppercase">Tier {t}</div>
+                        <div className="text-xs font-bold truncate mt-0.5" style={{ color: isPassed || isNext ? conf.colorHex : undefined }}>
+                          {conf.name}
+                        </div>
+                        <div className="text-[10px] font-semibold mt-1">
+                          +{conf.atkBonusPercent}% All Stats
+                        </div>
+                        <div className="text-[9px] mt-0.5 text-slate-400">
+                          {isPassed ? '✓ AWAKENED' : isNext ? 'NEXT TIER' : 'LOCKED'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Next Tier Upgrade Requirements & Perks */}
+              {nextConfig ? (
+                <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-300">
+                      Next Ascension: <span className="text-amber-300 font-black">{nextConfig.name}</span>
+                    </span>
+                    <span className="text-[11px] font-semibold text-purple-300">
+                      {nextConfig.auraTitle}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="p-2 bg-slate-900 rounded-lg border border-rose-500/20 text-center">
+                      <span className="text-[10px] text-slate-400 block">ATK Boost</span>
+                      <span className="font-bold text-rose-300">+{nextConfig.atkBonusPercent}%</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded-lg border border-emerald-500/20 text-center">
+                      <span className="text-[10px] text-slate-400 block">HP Boost</span>
+                      <span className="font-bold text-emerald-300">+{nextConfig.hpBonusPercent}%</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded-lg border border-cyan-500/20 text-center">
+                      <span className="text-[10px] text-slate-400 block">Speed</span>
+                      <span className="font-bold text-cyan-300">+{nextConfig.speedBonus} SPD</span>
+                    </div>
+                    <div className="p-2 bg-slate-900 rounded-lg border border-amber-500/20 text-center">
+                      <span className="text-[10px] text-slate-400 block">Crit Rate</span>
+                      <span className="font-bold text-amber-300">+{nextConfig.critBonus}% CRIT</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1 border-t border-slate-800/80">
+                    <div className="flex items-center gap-3">
+                      <span className={`font-semibold ${availableDuplicates >= nextConfig.duplicatesRequired ? 'text-emerald-300' : 'text-red-400'}`}>
+                        Duplicate Souls: {availableDuplicates} / {nextConfig.duplicatesRequired}
+                      </span>
+                      <span>•</span>
+                      <span className={`font-semibold ${player.crystals >= nextConfig.crystalsRequired ? 'text-emerald-300' : 'text-red-400'}`}>
+                        Divine Crystals: {player.crystals} / {nextConfig.crystalsRequired}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleAddTestDuplicate}
+                      className="text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer"
+                      title="Add duplicate copy for testing Soul Awakening"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Test Duplicate (+1 Copy)</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-cyan-950/50 border border-cyan-500/40 text-center text-xs font-bold text-cyan-300 relative z-10">
+                  👑 Pinnacle Reached! {liveChar.name} has achieved Maximum Soul Awakening (Tier 5: Omni Sovereign)!
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2 relative z-10">
+                <button
+                  onClick={() => setAwakeningWarrior(null)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+                >
+                  Close
+                </button>
+
+                {nextConfig && (
+                  <button
+                    onClick={handleAwaken}
+                    disabled={!canAwaken}
+                    className={`px-6 py-2.5 rounded-xl text-xs font-black font-heading tracking-wide uppercase transition cursor-pointer flex items-center gap-2 ${
+                      canAwaken
+                        ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95'
+                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Consume Duplicate & Awaken Soul</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

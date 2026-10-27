@@ -15,6 +15,7 @@ import {
   RotateCcw,
   PlusCircle,
 } from 'lucide-react';
+import { NayeemMastermindTribute } from './NayeemMastermindTribute';
 
 interface NavbarProps {
   onOpenTerminal: () => void;
@@ -84,6 +85,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTerminal, onOpenAdmin }) =
             </button>
           </div>
         </div>
+
+        {/* Mastermind Puzzle Tribute Banner below the brand */}
+        <NayeemMastermindTribute />
 
         {/* Resources & Battle Stat Badges */}
         <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-y-2 gap-x-4 text-xs font-medium">

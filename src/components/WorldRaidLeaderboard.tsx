@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { WORLD_RAID } from '../data/gameData';
-import { Swords, Trophy, Skull, RefreshCw, Heart, Sparkles, ShieldAlert } from 'lucide-react';
+import { getArtwork } from '../data/characterArtwork';
+import { ArenaCombatModal } from './ArenaCombatModal';
+import { Swords, Trophy, Skull, RefreshCw, Heart, Sparkles, ShieldAlert, Crosshair } from 'lucide-react';
 
 export const WorldRaidLeaderboard: React.FC = () => {
   const { player, stats, inventory, worldRaid, attackWorldRaid, startWorldRaid, healPlayer } = useGame();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [is2DArenaOpen, setIs2DArenaOpen] = useState(false);
+
+  const dragonArt = getArtwork(WORLD_RAID.name, 'raid');
 
   const handleAttack = () => {
     const res = attackWorldRaid();
     if (res.defeated) {
-      setFeedback(`💥 OMEGA DRAGON ANNIHILATED! Insane 10x multiversal bounty deposited!`);
+      setFeedback(`💥 OMEGA DRAGON ANNIHILATED! Multiverse raid bounty deposited!`);
     } else {
       setFeedback(`Struck ${WORLD_RAID.name} for ${res.damageDealt.toLocaleString()} DMG! (Remaining HP: ${worldRaid.hp.toLocaleString()})`);
     }
@@ -46,20 +51,31 @@ export const WorldRaidLeaderboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* World Raid Arena */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-rose-950/60 to-slate-900 border border-rose-500/40 shadow-2xl space-y-5">
+      {/* World Raid Arena Header */}
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-rose-950/60 to-slate-900 border border-rose-500/40 shadow-2xl space-y-5">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs uppercase tracking-wider">
-              <Skull className="w-4 h-4 text-rose-400" />
-              <span>Multiverse Global Event (10x Rewards)</span>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden border border-rose-500/40 shrink-0 bg-slate-950 relative shadow-xl">
+              <img
+                src={dragonArt.avatarUrl}
+                alt={WORLD_RAID.name}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
             </div>
-            <h2 className="text-3xl font-black font-heading text-white mt-1">
-              {WORLD_RAID.name}
-            </h2>
-            <p className="text-xs text-slate-300 max-w-xl">
-              Infinite attacks with ZERO countdown cooldown! Attack as much as you want. Even if defeated, the boss stays at the exact same HP so you can heal with Senzu Beans and continue fighting!
-            </p>
+
+            <div>
+              <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs uppercase tracking-wider">
+                <Skull className="w-4 h-4 text-rose-400" />
+                <span>Multiverse Global Event (10x Rewards)</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black font-heading text-white mt-1">
+                {WORLD_RAID.name}
+              </h2>
+              <p className="text-xs text-slate-300 max-w-xl">
+                Persistent multiversal shadow dragon! Choose real-time 2D joystick arena combat or rapid continuous strike.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -90,7 +106,7 @@ export const WorldRaidLeaderboard: React.FC = () => {
         </div>
 
         {/* Boss HP Bar */}
-        <div className="p-5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+        <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-400 flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4 text-rose-400" />
@@ -108,23 +124,29 @@ export const WorldRaidLeaderboard: React.FC = () => {
             />
           </div>
 
-          {/* FREE RAPID ATTACK BUTTON (NO COUNTDOWN) */}
-          <div className="flex flex-col items-center gap-2 pt-2">
+          {/* COMBAT ACTIONS: 2D Interactive Arena or Free Rapid Strike */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
+            <button
+              onClick={() => setIs2DArenaOpen(true)}
+              disabled={!worldRaid.active}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-heading font-black text-xs sm:text-sm tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 transition cursor-pointer shadow-xl shadow-cyan-500/20"
+            >
+              <Crosshair className="w-4 h-4" />
+              <span>2D PLAYABLE RAID ARENA</span>
+            </button>
+
             <button
               onClick={handleAttack}
               disabled={!worldRaid.active}
-              className={`px-10 py-4 rounded-xl font-heading font-black text-base tracking-wider flex items-center gap-2.5 transition cursor-pointer shadow-xl ${
+              className={`w-full sm:w-auto px-8 py-3.5 rounded-2xl font-heading font-black text-xs sm:text-sm tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-xl ${
                 worldRaid.active
-                  ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white shadow-rose-600/30 hover:scale-105 active:scale-95 animate-pulse"
+                  ? "bg-gradient-to-r from-red-600 via-rose-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white shadow-rose-600/30 active:scale-95"
                   : "bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed"
               }`}
             >
-              <Swords className="w-5 h-5" />
-              <span>{worldRaid.active ? "RAPID STRIKE (NO COOLDOWN!)" : "RAID BOSS SLAIN"}</span>
+              <Swords className="w-4 h-4" />
+              <span>{worldRaid.active ? "RAPID STRIKE (INSTANT)" : "RAID BOSS SLAIN"}</span>
             </button>
-            <span className="text-[11px] text-amber-400 font-semibold">
-              ⚡ Free unrestricted continuous attacks enabled. 10x reward drops upon defeat!
-            </span>
           </div>
         </div>
       </div>
@@ -136,58 +158,48 @@ export const WorldRaidLeaderboard: React.FC = () => {
       )}
 
       {/* Leaderboard Table */}
-      <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
+      <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-400" />
-          <h3 className="font-heading font-black text-xl text-white">Multiverse Fighter Leaderboard</h3>
+          <h3 className="text-lg font-bold font-heading text-white">
+            Multiverse Combat Ranking
+          </h3>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase">
-                <th className="py-2.5 px-3">Rank</th>
-                <th className="py-2.5 px-3">Fighter</th>
-                <th className="py-2.5 px-3">Level</th>
-                <th className="py-2.5 px-3">Title</th>
-                <th className="py-2.5 px-3 text-right">EXP Points</th>
+              <tr className="border-b border-slate-800 text-slate-400 font-mono">
+                <th className="pb-3 pl-2">Rank</th>
+                <th className="pb-3">Warrior</th>
+                <th className="pb-3">Ascension</th>
+                <th className="pb-3">Level</th>
+                <th className="pb-3 text-right pr-2">Combat EXP</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-medium">
-              {mockLeaderboard.map((u) => (
+              {mockLeaderboard.map((user) => (
                 <tr
-                  key={u.name}
-                  className={`transition ${
-                    u.isPlayer
-                      ? "bg-amber-500/10 text-amber-300 font-bold"
-                      : "hover:bg-slate-850 text-slate-300"
+                  key={user.rank}
+                  className={`hover:bg-slate-800/40 transition ${
+                    user.isPlayer ? "bg-amber-500/10 text-amber-200 font-bold" : "text-slate-300"
                   }`}
                 >
-                  <td className="py-3 px-3">
-                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md font-black ${
-                      u.rank === 1
-                        ? "bg-amber-500 text-slate-950"
-                        : u.rank === 2
-                        ? "bg-slate-400 text-slate-950"
-                        : u.rank === 3
-                        ? "bg-amber-700 text-white"
-                        : "bg-slate-950 text-slate-400"
-                    }`}>
-                      {u.rank}
-                    </span>
+                  <td className="py-3 pl-2 font-mono">
+                    {user.rank === 1 ? "🥇 #1" : user.rank === 2 ? "🥈 #2" : user.rank === 3 ? "🥉 #3" : `#${user.rank}`}
                   </td>
-                  <td className="py-3 px-3 font-semibold flex items-center gap-2">
-                    <span>{u.name}</span>
-                    {u.isPlayer && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-black">
+                  <td className="py-3 flex items-center gap-2">
+                    <span>{user.name}</span>
+                    {user.isPlayer && (
+                      <span className="text-[10px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded font-black">
                         YOU
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-3 text-cyan-400 font-bold">Lv. {u.level}</td>
-                  <td className="py-3 px-3 text-slate-400">{u.rankTitle}</td>
-                  <td className="py-3 px-3 text-right font-mono font-bold text-white">
-                    {u.exp.toLocaleString()}
+                  <td className="py-3 text-slate-400 font-mono">{user.rankTitle}</td>
+                  <td className="py-3 text-cyan-400 font-mono">Lv. {user.level}</td>
+                  <td className="py-3 text-right pr-2 font-mono text-amber-400">
+                    {user.exp.toLocaleString()} EXP
                   </td>
                 </tr>
               ))}
@@ -195,6 +207,23 @@ export const WorldRaidLeaderboard: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* 2D Interactive Arena Modal for Omega Dragon */}
+      <ArenaCombatModal
+        isOpen={is2DArenaOpen}
+        onClose={() => setIs2DArenaOpen(false)}
+        enemyName={WORLD_RAID.name}
+        isBoss={true}
+        bossHpMax={worldRaid.maxHp}
+        bossAtkVal={WORLD_RAID.dmg}
+        onVictory={() => {
+          worldRaid.hp = 0;
+          worldRaid.active = false;
+        }}
+        onDefeat={() => {
+          // Handled inside arena
+        }}
+      />
     </div>
   );
 };

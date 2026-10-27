@@ -612,6 +612,387 @@ Status: ${raid.active ? '🟢 <b>ACTIVE RAID</b>' : '🔴 <b>DEFEATED</b>'}
       };
     }
 
+    case '/battlepass':
+    case '/pass': {
+      return {
+        text: `
+👑 <b>SUPER HEROES BATTLE PASS (SEASON 1)</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Season 1: <b>Omni Transcendence</b> (18 Days Left)
+Current Pass Progress: <b>Tier 15 / 30</b> (1,450 Total Pass XP)
+
+🎁 <b>Active Rewards:</b>
+• Free Track: 💰 50,000 Zeni + 🎫 5x Gacha Tickets
+• Premium Track: 🌌 Universe Seed Core + 👑 Grand Priest Vestment
+• Tier 30 Grand Prize: 💥 <b>Ultra Vegito (Limit Breaker SP+)</b>
+
+📜 <b>Pass Missions:</b>
+1. [Daily] Win 3 Patrol battles (3/3) — <b>Ready to Claim! (+40 XP)</b>
+2. [Daily] Complete 1 Beam Struggle (1/1) — <b>Ready to Claim! (+50 XP)</b>
+3. [Weekly] Defeat 25 enemies (18/25) — In Progress (+150 XP)
+4. [Seasonal] Collect all 7 Dragon Balls (5/7) — In Progress (+500 XP)
+
+Click the <b>Battle Pass</b> tab in the web menu to claim rewards!
+        `.trim(),
+        keyboardHints: ['/menu', '/profile', '/explore', '/beamstruggle'],
+      };
+    }
+
+    case '/menu': {
+      const playerLevel = Math.floor(state.player.exp / 100) + 1;
+      return {
+        text: `
+🌟 <b>DRAGON BALL: SDBH MASTER MENU</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Warrior:</b> ${state.player.firstName}
+🥋 <b>Active Champion:</b> <code>${state.player.equippedChar || 'Saibaman'}</code>
+⭐ <b>Level:</b> ${playerLevel} | <b>Rank:</b> Rank ${state.player.rank}
+💰 <b>Yens:</b> ${state.player.yens.toLocaleString()} | 💎 <b>Gems:</b> ${state.player.gems.toLocaleString()}
+🔮 <b>Crystals:</b> ${state.player.crystals.toLocaleString()} | ⚡ <b>Stamina:</b> 100/100
+
+📜 <b>Core Categories:</b>
+⚔️ <b>Combat:</b> /explore, /combathistory, /heal, /beamstruggle, /rift
+🥋 <b>Hero Power:</b> /mycharacters, /equip, /skills, /zenkaiboost, /ultrainstinct
+🌌 <b>SDBH Sagas:</b> /timemachine, /hyperbolic, /godslayer, /potara
+🛡️ <b>Clan Wars:</b> /clan (war, perks, territory, vault, rally), /raid
+🔮 <b>Economy:</b> /shop, /daily_shop, /craft, /auction, /bounty, /pity
+✨ <b>Shenron:</b> /wish, /dragonradar, /achievements, /quests, /leaderboard
+        `.trim(),
+        keyboardHints: ['/profile', '/explore', '/beamstruggle', '/zenkaiboost', '/rift', '/clan'],
+      };
+    }
+
+    case '/unstuck': {
+      callbacks.onUpdatePlayer(prev => ({ ...prev, currentHp: prev.maxHp }));
+      return {
+        text: `✨ <b>UNSTUCK APPLIED!</b> All combat states cleared, cooldowns refreshed, and health fully restored!`,
+        keyboardHints: ['/menu', '/explore', '/profile'],
+      };
+    }
+
+    case '/pity': {
+      return {
+        text: `
+🎰 <b>GACHA PITY SYSTEM GUARANTEES</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌟 <b>Legendary Guarantee:</b> <code>28/50</code> pulls
+🔥 <b>Mythical Guarantee:</b> <code>64/100</code> pulls
+🌌 <b>Omni-King / SP+ Guarantee:</b> <code>142/200</code> pulls
+
+<i>*Guarantees reset when a warrior of that tier or higher is summoned.*</i>
+Type <code>/gacha 10</code> or <code>/summon</code> to roll!
+        `.trim(),
+        keyboardHints: ['/gacha 10', '/gacha 50', '/roster'],
+      };
+    }
+
+    case '/zenkaiboost':
+    case '/zenkai': {
+      callbacks.onUpdatePlayer(prev => ({
+        ...prev,
+        maxHp: Math.floor(prev.maxHp * 1.25),
+        currentHp: Math.min(Math.floor(prev.maxHp * 1.25), prev.currentHp + Math.floor(prev.maxHp * 0.5)),
+      }));
+      return {
+        text: `
+⚡ <b>ZENKAI BOOST UNLEASHED!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Your Saiyan blood burns with transcendent wrath!
+💥 <b>ATK Boost:</b> +60% Power Surge applied!
+🛡️ <b>DEF Boost:</b> +60% Hardened Aura!
+❤️ <b>Vitality:</b> Restored 50% HP immediately! (+25% Max HP surge)
+
+<i>'A Saiyan gets stronger every time he crawls back from the brink of death!'</i>
+        `.trim(),
+        keyboardHints: ['/explore', '/beamstruggle', '/raid attack'],
+      };
+    }
+
+    case '/ultrainstinct':
+    case '/godki': {
+      return {
+        text: `
+🌌 <b>AUTONOMOUS ULTRA INSTINCT ACTIVATED!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Your mind empties and your body reacts completely on instinct!
+✨ <b>Evasion:</b> +40% chance to dodge any incoming strike
+⚡ <b>Speed:</b> +50% battle speed boost
+🗡️ <b>Counter-Jab:</b> Dodging triggers an immediate Silver Ki counter-strike!
+
+<i>'My heart is calm, my mind is clear... now let us battle!'</i>
+        `.trim(),
+        keyboardHints: ['/explore', '/beamstruggle', '/raid attack'],
+      };
+    }
+
+    case '/beamstruggle':
+    case '/clash': {
+      const clashPower = Math.floor(Math.random() * 45) + 85;
+      const won = clashPower >= 100;
+      if (won) {
+        callbacks.onUpdatePlayer(prev => ({
+          ...prev,
+          yens: prev.yens + 5000,
+          exp: prev.exp + 45,
+        }));
+        return {
+          text: `
+⚡ <b>BEAM STRUGGLE: VICTORY!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You gathered your maximum Ki into an earth-shattering blast!
+💥 Clash Power: <b>${clashPower}%</b> (Threshold: 100%)
+Your Kamehameha pushes through the enemy's beam, obliterating the horizon!
+
+🎁 <b>Rewards:</b> +5,000 Yens, +45 EXP!
+          `.trim(),
+          keyboardHints: ['/menu', '/explore', '/profile'],
+        };
+      }
+      return {
+        text: `
+⚡ <b>BEAM STRUGGLE: REPELLED!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The enemy's blast matched your output!
+💥 Clash Power: <b>${clashPower}%</b>
+The explosion sent both fighters skidding backward! Train your Ki in the dojo!
+        `.trim(),
+        keyboardHints: ['/zenkaiboost', '/explore'],
+      };
+    }
+
+    case '/potara': {
+      return {
+        text: `
+✨ <b>POTARA EARRINGS FUSION</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Attach the Supreme Kai's sacred emerald earrings to two warriors!
+
+🔥 <b>Canonical Potara Fusions:</b>
+• Goku + Vegeta ➔ <b>Vegito (SSGSS / Limit Breaker SS4)</b>
+• Caulifla + Kale ➔ <b>Kefla (Super Saiyan 2)</b>
+• Goku Black + Zamasu ➔ <b>Merged Zamasu Corrupted</b>
+
+Potara warriors gain combined stats +30% Fusion Resonance Bonus!
+Equip Potara Earrings from <code>/shop</code> to initiate fusion in battle.
+        `.trim(),
+        keyboardHints: ['/fuse', '/roster', '/shop'],
+      };
+    }
+
+    case '/timemachine': {
+      return {
+        text: `
+⏳ <b>CAPSULE CORP TIME MACHINE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Select a fractured timeline era to investigate with Chronoa & Trunks: Xeno:
+
+1. ⛓️ <b>Prison Planet Arc</b> — Clash with Cumber & Fu
+2. 🌌 <b>Universal Conflict Arc</b> — Stop the Universe Seed & Hearts
+3. 🌑 <b>Dark Demon Realm Arc</b> — Infiltrate Mechikabura's Citadel
+4. ⚔️ <b>Super Space-Time War Arc</b> — Battle the False Universe Avatars
+
+Each era drops exclusive Chrono Crystals and Key Sword fragments!
+        `.trim(),
+        keyboardHints: ['/saga', '/explore', '/rift'],
+      };
+    }
+
+    case '/rift':
+    case '/dimensionrift': {
+      return {
+        text: `
+🌀 <b>SPACE-TIME DIMENSIONAL RIFT OPENED!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+An anomaly has shattered the fabric of reality!
+👾 <b>Rift Boss:</b> Golden Great Ape Cumber (Limit Breaker)
+❤️ <b>Boss HP:</b> 250,000 / 250,000
+⏱️ <b>Time Remaining:</b> 2 Hours
+
+Collaborate with your clan members to strike the rift!
+Rewards include <b>Universe Seed Shards</b> and <b>SP+ Summon Tokens</b>!
+        `.trim(),
+        keyboardHints: ['/raid attack', '/clan', '/beamstruggle'],
+      };
+    }
+
+    case '/dragonradar': {
+      const held = state.dragonBalls ? state.dragonBalls.length : 0;
+      return {
+        text: `
+📡 <b>DRAGON RADAR MARK VII SCAN</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+*BEEP BEEP BEEP*
+Current Dragon Balls Held: <b>${held}/7</b> ⭐
+
+${held === 7 ? '✨ <b>ALL 7 DRAGON BALLS DETECTED!</b>\nType <code>/wish</code> to summon the Eternal Dragon Shenron!' : 'Coordinates locked! Remaining Dragon Balls are scattered across Planet Earth and Planet Namek.\nRun <code>/explore</code> patrols to retrieve them!'}
+        `.trim(),
+        keyboardHints: held === 7 ? ['/wish', '/profile'] : ['/explore', '/profile'],
+      };
+    }
+
+    case '/craft': {
+      return {
+        text: `
+🔨 <b>CAPSULE CORP CRAFTING FORGE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Combine planetary materials and raid boss crystals to forge divine equipment:
+
+1. 🗡️ <b>Z-Sword:</b> 5x Katchin Shards + 25,000 Yens
+2. 🥋 <b>Whis Martial Gi:</b> 3x Angelic Silk + 50 Gems
+3. 🌌 <b>Key Sword:</b> 1x Demon Realm Core + 10x Chrono Crystals
+4. 🛡️ <b>Grand Priest Vestment:</b> 5x Omni Shards + 500 Gems
+
+To craft, acquire boss materials through <code>/explore</code> and <code>/raid</code>!
+        `.trim(),
+        keyboardHints: ['/shop', '/inventory', '/explore'],
+      };
+    }
+
+    case '/daily_shop': {
+      return {
+        text: `
+🛍️ <b>24-HOUR ROTATING DAILY SHOP</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Your Balance: 💰 ${state.player.yens.toLocaleString()} Yens | 💎 ${state.player.gems.toLocaleString()} Gems
+
+1. 🌿 <b>3x Blessed Senzu Beans</b> — 2,500 Yens
+2. 🛡️ <b>Saiyan High-Density Armor</b> — 15,000 Yens
+3. 🗡️ <b>Tapion Brave Sword (Shard)</b> — 45,000 Yens
+4. 📜 <b>Dragon Radar Battery</b> — 50 Gems
+5. 🌟 <b>SP+ Summon Ticket</b> — 250 Gems
+
+Use <code>/buy &lt;item_name&gt;</code> to purchase!
+        `.trim(),
+        keyboardHints: ['/shop', '/inventory'],
+      };
+    }
+
+    case '/titles': {
+      return {
+        text: `
+🏷️ <b>MARTIAL TITLES & PASSIVE BUFFS</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Active Title: 🎖️ <b>Rank ${state.player.rank} Ascendant</b>
+
+Unlocked Titles:
+• 🥋 <b>Novice Martial Artist:</b> +0%
+• 🐢 <b>Turtle School Adept:</b> +5% DEF
+• 🌍 <b>Earth's Champion:</b> +8% ATK
+• 🔥 <b>Super Saiyan Prodigy:</b> +10% Crit Rate
+• ⚡ <b>Limit Breaker:</b> +15% All Stats
+• 🌌 <b>Omni Arbiter:</b> +25% All Stats (Unlocked at Lv. 100)
+        `.trim(),
+        keyboardHints: ['/profile', '/achievements'],
+      };
+    }
+
+    case '/element': {
+      return {
+        text: `
+🌪️ <b>ELEMENTAL AFFINITIES & SYNERGY</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 <b>Fire:</b> Strong vs Wind & Ice | Weak vs Water & Earth
+💧 <b>Water:</b> Strong vs Fire & Earth | Weak vs Lightning & Wind
+⚡ <b>Lightning:</b> Strong vs Water & Wind | Weak vs Earth
+🌿 <b>Earth:</b> Strong vs Lightning & Fire | Weak vs Water & Wind
+✨ <b>Light:</b> Mutual critical vulnerability with Dark
+🌑 <b>Dark:</b> Mutual critical vulnerability with Light
+🌌 <b>Divine Ki:</b> Deconstructs mortal guards by 20%
+
+Attacking an opponent's elemental weakness deals <b>+35% True Damage</b>!
+        `.trim(),
+        keyboardHints: ['/menu', '/explore'],
+      };
+    }
+
+    case '/hyperbolic':
+    case '/hbtc': {
+      return {
+        text: `
+⏳ <b>HYPERBOLIC TIME CHAMBER (精神と時の部屋)</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+One day outside is one full year of intense gravity training inside!
+
+🔥 <b>Training Effects:</b>
+• 10x Martial Skill Proficiency gain
+• +200 Max Stamina training capacity
+• Unlocks latent technique masteries
+
+Enter the chamber by visiting Kami's Lookout on Planet Earth!
+        `.trim(),
+        keyboardHints: ['/train', '/skills', '/explore'],
+      };
+    }
+
+    case '/godslayer': {
+      return {
+        text: `
+🌌 <b>SDBH GODSLAYER HEARTS RAID</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hearts has unleashed the Universe Seed to defy the Omni-King!
+👑 <b>Boss:</b> Ultimate Godslayer Hearts
+❤️ <b>HP:</b> 500,000 / 500,000 | 💥 <b>ATK:</b> 1,750
+
+Deal damage to the raid boss alongside your clan!
+Top damage dealers earn the <b>Godslayer Crystal Blade</b>!
+        `.trim(),
+        keyboardHints: ['/raid attack', '/beamstruggle'],
+      };
+    }
+
+    case '/transcend': {
+      const curLvl = Math.floor(state.player.exp / 100) + 1;
+      return {
+        text: `
+✨ <b>MORTAL TRANSCENDENCE (PRESTIGE)</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Current Level: <b>${curLvl}</b> (Requirement: Level 100)
+
+Ascending resets level to 1, but permanently grants:
+🌟 <b>+30% All Base Combat Stats</b>
+🎖️ <b>Omni Ascendant Title & Badge</b>
+💎 <b>500 Sacred Bonus Gems</b>
+
+Are you ready to transcend the mortal realm?
+        `.trim(),
+        keyboardHints: ['/rankup', '/profile'],
+      };
+    }
+
+    case '/auction': {
+      return {
+        text: `
+🏛️ <b>GALACTIC AUCTION HOUSE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Trade equipment, capsules, and warrior tokens with other fighters!
+
+Subcommands:
+• <code>/auction list &lt;item&gt; &lt;price&gt;</code> — Put an item up for auction
+• <code>/auction bid &lt;id&gt; &lt;amount&gt;</code> — Place a bid on a listing
+• <code>/auction buyout &lt;id&gt;</code> — Buy out an active listing immediately
+• <code>/auction view</code> — View top active auctions across all planets
+        `.trim(),
+        keyboardHints: ['/inventory', '/shop'],
+      };
+    }
+
+    case '/bounty': {
+      return {
+        text: `
+🎯 <b>GALACTIC PATROL BOUNTY BOARD</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Jaco has posted bounties for dangerous intergalactic fugitives:
+
+1. 🔴 <b>Fugitive: Cumber (Evil Saiyan)</b> — Reward: 100,000 Yens + 25 Gems
+2. 🟣 <b>Fugitive: Dark King Fu</b> — Reward: 250,000 Yens + 50 Gems
+3. 🟢 <b>Fugitive: Moro (Planet Devourer)</b> — Reward: 150,000 Yens + 40 Gems
+
+Defeat these targets during <code>/explore</code> boss rounds to claim your bounty!
+        `.trim(),
+        keyboardHints: ['/explore', '/menu'],
+      };
+    }
+
     default: {
       return {
         text: `❓ Unrecognized command <code>${command}</code>. Type <code>/help</code> for the list of available commands.`,

@@ -13,6 +13,94 @@ export interface MilestoneTalent {
   };
 }
 
+export interface SoulAwakeningTierInfo {
+  tier: number;
+  name: string;
+  auraTitle: string;
+  glowClass: string;
+  cardAuraClass: string;
+  atkBonusPercent: number;
+  hpBonusPercent: number;
+  speedBonus: number;
+  critBonus: number;
+  duplicatesRequired: number;
+  crystalsRequired: number;
+  colorHex: string;
+}
+
+export const SOUL_AWAKENING_CONFIG: Record<number, SoulAwakeningTierInfo> = {
+  1: {
+    tier: 1,
+    name: 'Awakened Ki I',
+    auraTitle: 'Golden Super Saiyan Flare',
+    glowClass: 'shadow-[0_0_20px_rgba(245,158,11,0.6)] border-amber-400',
+    cardAuraClass: 'ring-2 ring-amber-400/80 shadow-lg shadow-amber-500/40 bg-gradient-to-t from-amber-950/30 via-transparent to-amber-900/20',
+    atkBonusPercent: 12,
+    hpBonusPercent: 12,
+    speedBonus: 4,
+    critBonus: 2,
+    duplicatesRequired: 1,
+    crystalsRequired: 1,
+    colorHex: '#f59e0b',
+  },
+  2: {
+    tier: 2,
+    name: 'Super Soul II',
+    auraTitle: 'Super Saiyan Blue Godly Ki',
+    glowClass: 'shadow-[0_0_25px_rgba(14,165,233,0.7)] border-sky-400',
+    cardAuraClass: 'ring-2 ring-sky-400/90 shadow-xl shadow-sky-500/50 bg-gradient-to-t from-sky-950/40 via-transparent to-cyan-900/30',
+    atkBonusPercent: 25,
+    hpBonusPercent: 25,
+    speedBonus: 8,
+    critBonus: 4,
+    duplicatesRequired: 1,
+    crystalsRequired: 2,
+    colorHex: '#0ea5e9',
+  },
+  3: {
+    tier: 3,
+    name: 'God Soul III',
+    auraTitle: 'Crimson God of Destruction Aura',
+    glowClass: 'shadow-[0_0_30px_rgba(244,63,94,0.8)] border-rose-500',
+    cardAuraClass: 'ring-2 ring-rose-500 shadow-2xl shadow-rose-600/60 bg-gradient-to-t from-rose-950/40 via-transparent to-red-900/30',
+    atkBonusPercent: 40,
+    hpBonusPercent: 40,
+    speedBonus: 12,
+    critBonus: 6,
+    duplicatesRequired: 1,
+    crystalsRequired: 3,
+    colorHex: '#f43f5e',
+  },
+  4: {
+    tier: 4,
+    name: 'Instinct Soul IV',
+    auraTitle: 'Ultra Instinct Stardust Nebula',
+    glowClass: 'shadow-[0_0_35px_rgba(168,85,247,0.85)] border-purple-400',
+    cardAuraClass: 'ring-2 ring-purple-400 shadow-2xl shadow-purple-600/70 bg-gradient-to-t from-purple-950/40 via-transparent to-fuchsia-900/30',
+    atkBonusPercent: 60,
+    hpBonusPercent: 60,
+    speedBonus: 18,
+    critBonus: 9,
+    duplicatesRequired: 2,
+    crystalsRequired: 4,
+    colorHex: '#a855f7',
+  },
+  5: {
+    tier: 5,
+    name: 'Omni Sovereign V',
+    auraTitle: 'Omniversal Sovereign Chromatic Radiance',
+    glowClass: 'shadow-[0_0_45px_rgba(6,182,212,0.9)] border-cyan-300 animate-pulse',
+    cardAuraClass: 'ring-2 ring-cyan-300 shadow-[0_0_35px_rgba(6,182,212,0.6)] bg-gradient-to-t from-cyan-950/50 via-purple-950/30 to-amber-900/30',
+    atkBonusPercent: 85,
+    hpBonusPercent: 85,
+    speedBonus: 25,
+    critBonus: 14,
+    duplicatesRequired: 2,
+    crystalsRequired: 5,
+    colorHex: '#06b6d4',
+  },
+};
+
 export interface ProgressionStats {
   level: number;
   currentExp: number;
@@ -27,6 +115,8 @@ export interface ProgressionStats {
   atk: number;
   speed: number;
   critRate: number;
+  soulAwakeningTier: number;
+  soulAwakeningGlow: string;
   unlockedTalents: MilestoneTalent[];
   nextTalent?: MilestoneTalent;
 }
@@ -183,10 +273,25 @@ export function computeWarriorProgression(
     if (t.statModifier.critBonus) bonusCrit += t.statModifier.critBonus;
   });
 
-  const finalHp = Math.floor(baseHp * (1 + bonusHpPercent / 100));
-  const finalAtk = Math.floor(baseAtk * (1 + bonusAtkPercent / 100));
-  const finalSpeed = Math.floor(baseSpeed + bonusSpeed);
-  const finalCrit = Math.min(config.maxCritRate, parseFloat((baseCrit + bonusCrit).toFixed(1)));
+  // Apply Soul Awakening bonuses (Tier 1-5)
+  const awakeningTier = Math.min(5, Math.max(0, char.soulAwakeningTier || 0));
+  const awakeningInfo = SOUL_AWAKENING_CONFIG[awakeningTier];
+  let soulAtkBonus = 0;
+  let soulHpBonus = 0;
+  let soulSpeedBonus = 0;
+  let soulCritBonus = 0;
+
+  if (awakeningInfo) {
+    soulAtkBonus = awakeningInfo.atkBonusPercent;
+    soulHpBonus = awakeningInfo.hpBonusPercent;
+    soulSpeedBonus = awakeningInfo.speedBonus;
+    soulCritBonus = awakeningInfo.critBonus;
+  }
+
+  const finalHp = Math.floor(baseHp * (1 + (bonusHpPercent + soulHpBonus) / 100));
+  const finalAtk = Math.floor(baseAtk * (1 + (bonusAtkPercent + soulAtkBonus) / 100));
+  const finalSpeed = Math.floor(baseSpeed + bonusSpeed + soulSpeedBonus);
+  const finalCrit = Math.min(config.maxCritRate, parseFloat((baseCrit + bonusCrit + soulCritBonus).toFixed(1)));
 
   const bp = calculateBattlePower(finalHp, finalAtk, finalSpeed, finalCrit, char.rarity, level);
 
@@ -207,6 +312,8 @@ export function computeWarriorProgression(
     atk: finalAtk,
     speed: finalSpeed,
     critRate: finalCrit,
+    soulAwakeningTier: awakeningTier,
+    soulAwakeningGlow: awakeningInfo ? awakeningInfo.cardAuraClass : '',
     unlockedTalents,
     nextTalent,
   };

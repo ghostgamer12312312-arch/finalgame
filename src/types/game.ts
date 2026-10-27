@@ -14,6 +14,32 @@ export interface CharacterItem {
   level?: number;
   exp?: number;
   limitBreakTier?: number;
+  copies?: number; // Count of duplicate character souls owned
+  soulAwakeningTier?: number; // 0 to 5
+  soulAwakeningBonus?: {
+    atkPercent: number;
+    hpPercent: number;
+    speedBonus: number;
+    critBonus: number;
+  };
+}
+
+export interface QuestItem {
+  id: string;
+  category: 'daily' | 'weekly' | 'monthly';
+  title: string;
+  description: string;
+  target: number;
+  current: number;
+  completed: boolean;
+  claimed: boolean;
+  reward: {
+    yens?: number;
+    gems?: number;
+    crystals?: number;
+    tickets?: number;
+    exp?: number;
+  };
 }
 
 export interface EquipmentItem {

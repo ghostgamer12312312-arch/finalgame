@@ -1,7 +1,27 @@
+# Secrets — NEVER commit
 .env
-game.sqlite
+*.env
+!.env.example
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Python
 __pycache__/
-*.pyc
-*.pyo
-.vscode/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Logs
+*.log
+
+# OS
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

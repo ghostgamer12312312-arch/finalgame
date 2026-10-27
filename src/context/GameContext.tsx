@@ -45,6 +45,7 @@ import {
   getLimitBreakCost,
   getMaxLevelForWarrior,
   getExpRequiredForLevel,
+  SOUL_AWAKENING_CONFIG,
 } from '../logic/characterProgression';
 
 interface GameContextType {
@@ -93,6 +94,8 @@ interface GameContextType {
   fuseCharacters: (char1: string, char2: string, materialName?: string) => { success: boolean; newChar?: CharacterItem; message: string };
   trainWarrior: (charName: string, levels?: number) => { success: boolean; message: string; newLevel?: number };
   limitBreakWarrior: (charName: string) => { success: boolean; message: string; newTier?: number };
+  soulAwakenWarrior: (charName: string) => { success: boolean; message: string; newTier?: number };
+  addDuplicateWarrior: (charName: string, count?: number) => void;
   
   // Dojo & Shenron
   learnSkill: (name: string) => { success: boolean; message: string };
@@ -550,43 +553,43 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const rewards: string[] = [];
 
     if (battle.won) {
-      // 5x improved rewards as requested
-      const rewardTotal = Math.floor(enemy.reward * 5 * worldMultiplier * (1 + curRank * 0.25));
-      const expGain = Math.floor(150 * worldMultiplier);
-      const spGain = Math.floor(15 * worldMultiplier);
+      // Very low, balanced grinding rewards as requested
+      const rewardTotal = Math.max(5, Math.floor(enemy.reward * 0.35 * (1 + curRank * 0.05)));
+      const expGain = Math.max(4, Math.floor(10 * (1 + curRank * 0.03)));
+      const spGain = 1;
 
       rewards.push(`+${rewardTotal.toLocaleString()} Yens`);
       rewards.push(`+${expGain} EXP`);
-      rewards.push(`+${spGain} Skill Points`);
+      rewards.push(`+${spGain} SP`);
 
       let bonusGems = 0;
-      if (Math.random() < 0.35) {
-        bonusGems = Math.floor(Math.random() * 8) + 2;
-        rewards.push(`+${bonusGems} Gems`);
+      if (Math.random() < 0.06) {
+        bonusGems = 1;
+        rewards.push(`+1 Gem`);
       }
 
       let bonusCrystals = 0;
-      if (Math.random() < 0.18) {
-        bonusCrystals = Math.floor(Math.random() * 2) + 1;
-        rewards.push(`+${bonusCrystals} Crystal(s)`);
+      if (Math.random() < 0.02) {
+        bonusCrystals = 1;
+        rewards.push(`+1 Crystal`);
       }
 
       let bonusTickets = 0;
-      if (Math.random() < 0.25) {
-        bonusTickets = Math.floor(Math.random() * 2) + 1;
-        rewards.push(`+${bonusTickets} Gacha Ticket(s)`);
+      if (Math.random() < 0.03) {
+        bonusTickets = 1;
+        rewards.push(`+1 Gacha Ticket`);
       }
 
       let dragonBallWon: number | null = null;
-      if (Math.random() < 0.20) {
+      if (Math.random() < 0.025) {
         dragonBallWon = Math.floor(Math.random() * 7) + 1;
         rewards.push(`Found ${dragonBallWon}★ Dragon Ball!`);
       }
 
-      // NPC drop low level equipment (Weapons & Armors)
+      // Very rare NPC drop
       let itemWon: string | null = null;
-      if (Math.random() < 0.25) {
-        const pool = ["Wooden Sword", "Iron Sword", "Power Pole", "Leather Vest", "Steel Armor", "Turtle School Gi", "Potion", "Senzu Bean"];
+      if (Math.random() < 0.04) {
+        const pool = ["Wooden Sword", "Leather Vest", "Potion"];
         itemWon = pool[Math.floor(Math.random() * pool.length)];
         rewards.push(`Dropped Loot: ${itemWon}`);
       }
@@ -646,31 +649,36 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const rewards: string[] = [];
 
     if (battle.won) {
-      confetti({ particleCount: 90, spread: 80 });
-      // 5x boss rewards
-      const yensEarned = BOSS.yens * 5 * worldMultiplier;
-      const gemsEarned = BOSS.gems * 5;
-      const crystalsEarned = BOSS.crystals * 2;
-      const ticketsEarned = BOSS.tickets * 3;
-      const spEarned = BOSS.skillPoints * 4;
+      confetti({ particleCount: 70, spread: 70 });
+      // Very low, balanced boss rewards as requested
+      const yensEarned = Math.max(30, Math.floor(BOSS.yens * 0.25));
+      const gemsEarned = 2;
+      const crystalsEarned = Math.random() < 0.15 ? 1 : 0;
+      const ticketsEarned = Math.random() < 0.2 ? 1 : 0;
+      const spEarned = 2;
+      const expEarned = 35;
 
-      rewards.push(`+${yensEarned.toLocaleString()} Yens`);
-      rewards.push(`+${gemsEarned.toLocaleString()} Gems`);
-      rewards.push(`+${crystalsEarned} Crystals`);
-      rewards.push(`+${ticketsEarned} Gacha Tickets`);
-      rewards.push(`+${spEarned} Skill Points`);
-      rewards.push(`+2,000 EXP`);
+      rewards.push(`+${yensEarned} Yens`);
+      rewards.push(`+${gemsEarned} Gems`);
+      if (crystalsEarned > 0) rewards.push(`+1 Crystal`);
+      if (ticketsEarned > 0) rewards.push(`+1 Gacha Ticket`);
+      rewards.push(`+${spEarned} SP`);
+      rewards.push(`+${expEarned} EXP`);
 
-      // Guaranteed Dragon Ball drop from boss
-      const star = Math.floor(Math.random() * 7) + 1;
-      rewards.push(`Boss Drop: ${star}★ Dragon Ball`);
-      setDragonBalls(prev => ({ ...prev, [star]: (prev[star] || 0) + 1 }));
+      // Chance for Dragon Ball drop from boss
+      if (Math.random() < 0.25) {
+        const star = Math.floor(Math.random() * 7) + 1;
+        rewards.push(`Boss Drop: ${star}★ Dragon Ball`);
+        setDragonBalls(prev => ({ ...prev, [star]: (prev[star] || 0) + 1 }));
+      }
 
       // Rare boss gear drop
-      const bossDrops = ["Saiyan Blade", "Saiyan Armor", "Kamehameha Blade", "God Armor", "Senzu Bean"];
-      const droppedGear = bossDrops[Math.floor(Math.random() * bossDrops.length)];
-      rewards.push(`Loot: ${droppedGear}`);
-      setInventory(prev => ({ ...prev, [droppedGear]: (prev[droppedGear] || 0) + 1 }));
+      if (Math.random() < 0.10) {
+        const bossDrops = ["Saiyan Blade", "Turtle School Gi", "Potion"];
+        const droppedGear = bossDrops[Math.floor(Math.random() * bossDrops.length)];
+        rewards.push(`Loot: ${droppedGear}`);
+        setInventory(prev => ({ ...prev, [droppedGear]: (prev[droppedGear] || 0) + 1 }));
+      }
 
       setPlayer(prev => ({
         ...prev,
@@ -680,7 +688,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         crystals: prev.crystals + crystalsEarned,
         tickets: prev.tickets + ticketsEarned,
         skillPoints: prev.skillPoints + spEarned,
-        exp: prev.exp + 2000,
+        exp: prev.exp + expEarned,
         npcStreak: 0,
       }));
     } else {
@@ -781,8 +789,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCharacters(prev => {
       const next = [...prev];
       results.forEach(res => {
-        if (!next.some(c => c.name === res.name)) {
-          next.push(res);
+        const existingIdx = next.findIndex(c => c.name === res.name);
+        if (existingIdx !== -1) {
+          // Increment duplicate soul copies
+          next[existingIdx] = {
+            ...next[existingIdx],
+            copies: (next[existingIdx].copies || 1) + 1,
+          };
+        } else {
+          next.push({
+            ...res,
+            copies: 1,
+            soulAwakeningTier: 0,
+          });
         }
       });
       return next;
@@ -996,6 +1015,107 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // -----------------------------------------------------------
+  // SOUL AWAKENING SYSTEM (Duplicate Consumption & Permanent Glow VFX)
+  // -----------------------------------------------------------
+  const soulAwakenWarrior = (charName: string) => {
+    const target = characters.find(c => c.name === charName);
+    if (!target) return { success: false, message: "Warrior not found in roster." };
+
+    const eligibleRarities: Rarity[] = ['legendary', 'mythical', 'sp_plus', 'omni'];
+    if (!eligibleRarities.includes(target.rarity)) {
+      return {
+        success: false,
+        message: `Soul Awakening is reserved exclusively for Legendary, Mythical, SP+, and Omni warriors.`,
+      };
+    }
+
+    const curTier = target.soulAwakeningTier || 0;
+    if (curTier >= 5) {
+      return {
+        success: false,
+        message: `${charName} has achieved Maximum Soul Awakening (Tier 5: Omni Sovereign)!`,
+      };
+    }
+
+    const nextTier = curTier + 1;
+    const tierConfig = SOUL_AWAKENING_CONFIG[nextTier];
+    if (!tierConfig) {
+      return { success: false, message: "Invalid awakening tier configuration." };
+    }
+
+    const currentCopies = target.copies || 1;
+    const availableDuplicates = currentCopies - 1; // 1 is the active character
+
+    if (availableDuplicates < tierConfig.duplicatesRequired) {
+      return {
+        success: false,
+        message: `Requires ${tierConfig.duplicatesRequired} duplicate soul(s) of ${charName}. You have ${availableDuplicates} duplicate(s). Obtain more via Summon or Gacha!`,
+      };
+    }
+
+    if (player.crystals < tierConfig.crystalsRequired) {
+      return {
+        success: false,
+        message: `Requires ${tierConfig.crystalsRequired} Divine Crystal(s). You have ${player.crystals}.`,
+      };
+    }
+
+    // Deduct resources
+    setPlayer(prev => ({
+      ...prev,
+      crystals: Math.max(0, prev.crystals - tierConfig.crystalsRequired),
+    }));
+
+    // Consume duplicate souls and advance tier
+    setCharacters(prev => {
+      return prev.map(c => {
+        if (c.name === charName) {
+          const updatedCopies = Math.max(1, (c.copies || 1) - tierConfig.duplicatesRequired);
+          return {
+            ...c,
+            copies: updatedCopies,
+            soulAwakeningTier: nextTier,
+            soulAwakeningBonus: {
+              atkPercent: tierConfig.atkBonusPercent,
+              hpPercent: tierConfig.hpBonusPercent,
+              speedBonus: tierConfig.speedBonus,
+              critBonus: tierConfig.critBonus,
+            },
+          };
+        }
+        return c;
+      });
+    });
+
+    confetti({
+      particleCount: 160,
+      spread: 120,
+      colors: [tierConfig.colorHex, '#ffffff', '#ffd700'],
+    });
+
+    return {
+      success: true,
+      newTier: nextTier,
+      message: `✨ SOUL AWAKENING ASCENDED! ${charName} attained [${tierConfig.name}]! Unlocked ${tierConfig.auraTitle} with permanent +${tierConfig.atkBonusPercent}% ATK & HP, +${tierConfig.speedBonus} Speed, and +${tierConfig.critBonus}% Crit!`,
+    };
+  };
+
+  const addDuplicateWarrior = (charName: string, count = 1) => {
+    setCharacters(prev => {
+      const idx = prev.findIndex(c => c.name === charName);
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = {
+          ...next[idx],
+          copies: (next[idx].copies || 1) + count,
+        };
+        return next;
+      }
+      return prev;
+    });
+  };
+
+  // -----------------------------------------------------------
   // SKILLS & SHENRON WISHES
   // -----------------------------------------------------------
   const learnSkill = (name: string) => {
@@ -1043,25 +1163,25 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSkills(prev => [...prev, "Universe Breaker"]);
         rewardText = "God Ki Technique: Universe Breaker (+344 ATK)!";
       } else {
-        setPlayer(prev => ({ ...prev, yens: prev.yens + 500000, gems: prev.gems + 1000 }));
-        rewardText = "500,000 Yens & 1,000 Gems!";
+        setPlayer(prev => ({ ...prev, yens: prev.yens + 800, gems: prev.gems + 15 }));
+        rewardText = "800 Yens & 15 Gems!";
       }
     } else if (roll < 0.80) {
       setPlayer(prev => ({
         ...prev,
-        yens: prev.yens + 250000,
-        gems: prev.gems + 500,
-        crystals: prev.crystals + 30,
-        skillPoints: prev.skillPoints + 50,
+        yens: prev.yens + 500,
+        gems: prev.gems + 10,
+        crystals: prev.crystals + 1,
+        skillPoints: prev.skillPoints + 4,
       }));
-      rewardText = "250,000 Yens, 500 Gems, 30 Crystals, & 50 Skill Points!";
+      rewardText = "500 Yens, 10 Gems, 1 Crystal, & 4 Skill Points!";
     } else {
       setPlayer(prev => ({
         ...prev,
-        gems: prev.gems + 1200,
-        crystals: prev.crystals + 50,
+        gems: prev.gems + 20,
+        crystals: prev.crystals + 1,
       }));
-      rewardText = "1,200 Gems and 50 Crystals!";
+      rewardText = "20 Gems and 1 Crystal!";
     }
 
     return {
@@ -1092,31 +1212,35 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const rewards: string[] = [];
 
     if (battle.won) {
-      confetti({ particleCount: 130, spread: 110 });
-      // 5x summon rewards
-      const mult = data.rewardMult * 5;
-      const yenReward = 20000 * mult;
-      const gemReward = 50 * mult;
-      const crystalReward = 6 * mult;
-      const expReward = 500 * mult;
-      const spReward = 20 * mult;
+      confetti({ particleCount: 75, spread: 80 });
+      // Very low, balanced summon rewards as requested
+      const mult = data.rewardMult;
+      const yenReward = Math.max(30, Math.floor(65 * mult));
+      const gemReward = Math.max(1, Math.floor(2 * mult));
+      const crystalReward = Math.random() < 0.2 ? 1 : 0;
+      const expReward = Math.max(15, Math.floor(35 * mult));
+      const spReward = Math.max(1, Math.floor(2 * mult));
 
-      rewards.push(`+${yenReward.toLocaleString()} Yens`);
-      rewards.push(`+${gemReward.toLocaleString()} Gems`);
-      rewards.push(`+${crystalReward.toLocaleString()} Crystals`);
-      rewards.push(`+${expReward.toLocaleString()} EXP`);
-      rewards.push(`+${spReward.toLocaleString()} Skill Points`);
+      rewards.push(`+${yenReward} Yens`);
+      rewards.push(`+${gemReward} Gems`);
+      if (crystalReward > 0) rewards.push(`+1 Crystal`);
+      rewards.push(`+${expReward} EXP`);
+      rewards.push(`+${spReward} SP`);
 
-      // Gear drop
-      const gearPool = ["Supernova Blade", "Crusher Edge", "Doom Armor", "Celestial Armor", "Katchin Armor", "Kamehameha Blade", "Senzu Bean"];
-      const dropped = gearPool[Math.floor(Math.random() * gearPool.length)];
-      rewards.push(`Rare Boss Gear: ${dropped}`);
-      setInventory(prev => ({ ...prev, [dropped]: (prev[dropped] || 0) + 1 }));
+      // Chance for Gear drop
+      if (Math.random() < 0.15) {
+        const gearPool = ["Supernova Blade", "Crusher Edge", "Doom Armor", "Turtle School Gi", "Potion"];
+        const dropped = gearPool[Math.floor(Math.random() * gearPool.length)];
+        rewards.push(`Loot: ${dropped}`);
+        setInventory(prev => ({ ...prev, [dropped]: (prev[dropped] || 0) + 1 }));
+      }
 
-      // Dragon Ball drop
-      const dbStar = Math.floor(Math.random() * 7) + 1;
-      rewards.push(`Acquired ${dbStar}★ Dragon Ball`);
-      setDragonBalls(prev => ({ ...prev, [dbStar]: (prev[dbStar] || 0) + 1 }));
+      // Chance for Dragon Ball drop
+      if (Math.random() < 0.15) {
+        const dbStar = Math.floor(Math.random() * 7) + 1;
+        rewards.push(`Acquired ${dbStar}★ Dragon Ball`);
+        setDragonBalls(prev => ({ ...prev, [dbStar]: (prev[dbStar] || 0) + 1 }));
+      }
 
       // Reset boss health for next summon
       setBossHealthStates(prev => ({ ...prev, [kind]: data.hp }));
@@ -1170,18 +1294,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const rewards: string[] = [];
     if (defeated) {
-      confetti({ particleCount: 160, spread: 130 });
-      // 10x world raid rewards
-      const yens = 10000 * WORLD_RAID.rewardMult;
-      const gems = 500 * 10;
-      const crystals = 50 * 10;
-      const exp = 5000 * 10;
+      confetti({ particleCount: 90, spread: 80 });
+      // Very low, balanced world raid rewards as requested
+      const yens = 250;
+      const gems = 5;
+      const crystals = 1;
+      const exp = 50;
+      const tickets = 1;
 
-      rewards.push(`+${yens.toLocaleString()} Yens`);
-      rewards.push(`+${gems.toLocaleString()} Gems`);
-      rewards.push(`+${crystals.toLocaleString()} Crystals`);
-      rewards.push(`+${exp.toLocaleString()} EXP`);
-      rewards.push(`+25 Gacha Tickets`);
+      rewards.push(`+${yens} Yens`);
+      rewards.push(`+${gems} Gems`);
+      rewards.push(`+${crystals} Crystal`);
+      rewards.push(`+${exp} EXP`);
+      rewards.push(`+1 Gacha Ticket`);
 
       setPlayer(prev => ({
         ...prev,
@@ -1189,7 +1314,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         gems: prev.gems + gems,
         crystals: prev.crystals + crystals,
         exp: prev.exp + exp,
-        tickets: prev.tickets + 25,
+        tickets: prev.tickets + tickets,
       }));
     }
 
@@ -1412,27 +1537,34 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const rewards: string[] = [];
     if (defeated) {
-      confetti({ particleCount: 140, spread: 110 });
-      rewards.push(`+${bossData.rewardYens.toLocaleString()} Yens`);
-      rewards.push(`+${bossData.rewardGems.toLocaleString()} Gems`);
-      rewards.push(`+${bossData.rewardCrystals.toLocaleString()} Crystals`);
-      rewards.push(`+${bossData.rewardTickets} Gacha Tickets`);
-      rewards.push(`+${bossData.rewardSkillPoints} Skill Points`);
+      confetti({ particleCount: 80, spread: 80 });
+      // Very low, balanced clan raid rewards as requested
+      const yenReward = Math.max(50, Math.floor(bossData.rewardYens * 0.08));
+      const gemReward = 4;
+      const crystalReward = 1;
+      const ticketReward = 1;
+      const spReward = 2;
+
+      rewards.push(`+${yenReward} Yens`);
+      rewards.push(`+${gemReward} Gems`);
+      rewards.push(`+${crystalReward} Crystal`);
+      rewards.push(`+${ticketReward} Gacha Ticket`);
+      rewards.push(`+${spReward} SP`);
 
       setPlayer(prev => ({
         ...prev,
-        yens: prev.yens + bossData.rewardYens,
-        gems: prev.gems + bossData.rewardGems,
-        crystals: prev.crystals + bossData.rewardCrystals,
-        tickets: prev.tickets + bossData.rewardTickets,
-        skillPoints: prev.skillPoints + bossData.rewardSkillPoints,
+        yens: prev.yens + yenReward,
+        gems: prev.gems + gemReward,
+        crystals: prev.crystals + crystalReward,
+        tickets: prev.tickets + ticketReward,
+        skillPoints: prev.skillPoints + spReward,
       }));
 
       setClan(prev => prev ? ({
         ...prev,
-        treasureYens: prev.treasureYens + bossData.rewardYens,
-        treasureGems: prev.treasureGems + bossData.rewardGems,
-        treasureCrystals: prev.treasureCrystals + bossData.rewardCrystals,
+        treasureYens: prev.treasureYens + yenReward,
+        treasureGems: prev.treasureGems + gemReward,
+        treasureCrystals: prev.treasureCrystals + crystalReward,
       }) : null);
     }
 
@@ -1499,12 +1631,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     const streak = player.dailyDay === yesterday ? player.dailyStreak + 1 : 1;
 
+    // Very low, balanced daily rewards as requested
     const rewards: Record<string, number> = {
-      yens: 1500 + Math.min(streak, 20) * 500,
-      gems: Math.min(10 + Math.floor(streak * 2), 60),
+      yens: 40 + Math.min(streak, 10) * 10,
+      gems: Math.min(2 + Math.floor(streak / 3), 8),
     };
-    if (streak % 3 === 0) rewards.tickets = 2;
-    if (streak % 7 === 0) rewards.crystals = 3;
+    if (streak % 5 === 0) rewards.tickets = 1;
+    if (streak % 7 === 0) rewards.crystals = 1;
 
     setPlayer(prev => ({
       ...prev,
@@ -1516,7 +1649,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       crystals: prev.crystals + (rewards.crystals || 0),
     }));
 
-    confetti({ particleCount: 70, spread: 70 });
+    confetti({ particleCount: 50, spread: 60 });
     return {
       success: true,
       streak,
@@ -1538,12 +1671,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: "Weekly bounty already claimed this week. Try again next week!" };
     }
 
+    // Very low, balanced weekly rewards as requested
     const rewards = {
-      yens: 25000,
-      gems: 250,
-      crystals: 15,
-      tickets: 5,
-      skillPoints: 20,
+      yens: 250,
+      gems: 12,
+      crystals: 1,
+      tickets: 1,
+      skillPoints: 3,
     };
     const star = Math.floor(Math.random() * 3) + 1;
 
@@ -1824,6 +1958,8 @@ Weapon: ${player.weapon || 'None'} | Armor: ${player.armor || 'None'}`;
         fuseCharacters,
         trainWarrior,
         limitBreakWarrior,
+        soulAwakenWarrior,
+        addDuplicateWarrior,
         learnSkill,
         makeWish,
         summonBoss,

@@ -16,6 +16,9 @@ import { BotTerminalModal } from './components/BotTerminalModal';
 import { AdminToolbarModal } from './components/AdminToolbarModal';
 
 import { StorySagaCampaign } from './components/StorySagaCampaign';
+import { BattlePass } from './components/BattlePass';
+import { WorkspaceHub } from './components/WorkspaceHub';
+import { QuestsCenter } from './components/QuestsCenter';
 
 import {
   Swords,
@@ -30,6 +33,9 @@ import {
   Trophy,
   Calendar,
   BookOpen,
+  Award,
+  Cloud,
+  Target,
 } from 'lucide-react';
 
 export function App() {
@@ -51,6 +57,9 @@ export function App() {
     { id: 'clan', label: 'Clan', icon: Shield },
     { id: 'raid', label: 'World Raid', icon: Trophy },
     { id: 'rewards', label: 'Daily & Rank', icon: Calendar },
+    { id: 'quests', label: 'Quests (D/W/M)', icon: Target },
+    { id: 'battlepass', label: 'Battle Pass', icon: Award },
+    { id: 'workspace', label: 'Google Workspace', icon: Cloud },
   ];
 
   return (
@@ -102,6 +111,9 @@ export function App() {
         {activeTab === 'clan' && <ClanHall />}
         {activeTab === 'raid' && <WorldRaidLeaderboard />}
         {activeTab === 'rewards' && <DailyRankAltar />}
+        {activeTab === 'quests' && <QuestsCenter />}
+        {activeTab === 'battlepass' && <BattlePass />}
+        {activeTab === 'workspace' && <WorkspaceHub />}
       </main>
 
       {/* Footer */}

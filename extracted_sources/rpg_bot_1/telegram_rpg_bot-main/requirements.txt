@@ -1,0 +1,4 @@
+# Dragon Ball RPG Bot — production dependencies
+# Install: pip install -r requirements.txt
+
+python-telegram-bot==20.7

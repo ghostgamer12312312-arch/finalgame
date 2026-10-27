@@ -2,10 +2,29 @@ import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { BattleLogEntry } from '../types/game';
 import { BOSS, NPC_STREAK_FOR_BOSS } from '../data/gameData';
-import { Swords, Skull, Shield, Award, Flame, Sparkles, RefreshCw, Trophy, Heart, Zap, Info, ArrowRight } from 'lucide-react';
+import { getArtwork } from '../data/characterArtwork';
+import { ArenaCombatModal } from './ArenaCombatModal';
+import {
+  Swords,
+  Skull,
+  Shield,
+  Award,
+  Flame,
+  Sparkles,
+  RefreshCw,
+  Trophy,
+  Heart,
+  Zap,
+  Info,
+  ArrowRight,
+  Crosshair,
+  Gamepad2,
+} from 'lucide-react';
 
 export const CombatArena: React.FC = () => {
   const { player, stats, inventory, exploreMenu, friezaBossBattle, healPlayer } = useGame();
+  
+  // Fast Simulation Battle State
   const [battleState, setBattleState] = useState<{
     inProgress: boolean;
     enemyName: string;
@@ -16,9 +35,25 @@ export const CombatArena: React.FC = () => {
     isBoss?: boolean;
   } | null>(null);
 
+  // 2D Real-Time Interactive Arena Modal State
+  const [interactiveBattle, setInteractiveBattle] = useState<{
+    isOpen: boolean;
+    enemyName: string;
+    isBoss: boolean;
+    hp: number;
+    atk: number;
+  }>({
+    isOpen: false,
+    enemyName: 'Saibaman',
+    isBoss: false,
+    hp: 4000,
+    atk: 180,
+  });
+
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [healMessage, setHealMessage] = useState<string | null>(null);
 
+  // Auto explore simulation
   const handleExploreChoice = (choice: '1' | '2' | '3') => {
     setInfoMessage(null);
     const res = exploreMenu(choice);
@@ -39,7 +74,47 @@ export const CombatArena: React.FC = () => {
     });
   };
 
-  const handleBossFight = () => {
+  // Launch 2D Real-time Arena for exploration NPC
+  const launchInteractiveExploreBattle = () => {
+    setInfoMessage(null);
+    // Pick current planet NPC or patrol target
+    const currentPlanetEnemies: Record<string, string[]> = {
+      Earth: ["Saibaman", "Red Ribbon Soldier", "Appule"],
+      Hell: ["Cell Junior", "Frieza Soldier", "Spopovich"],
+      "Kai Planet": ["Nappa", "Raditz", "Captain Ginyu (Body Change)"],
+      "Supreme Kai Planet": ["Dabura (Demon Realm King)", "Majin Vegeta", "Super Buu (Gohan Absorbed)"],
+      "Lord Beerus Planet": ["Whis", "Beerus", "Golden Frieza"],
+      Omniverse: ["Jiren (Full Power)", "Grand Priest (Daishinkan)", "Ultra Instinct Goku"],
+    };
+
+    const list = currentPlanetEnemies[player.travel] || ["Saibaman", "Frieza Soldier"];
+    const chosenEnemy = list[Math.floor(Math.random() * list.length)];
+
+    const calculatedHp = Math.floor(stats.hp * (0.4 + Math.random() * 0.4));
+    const calculatedAtk = Math.floor(stats.atk * (0.35 + Math.random() * 0.3));
+
+    setInteractiveBattle({
+      isOpen: true,
+      enemyName: chosenEnemy,
+      isBoss: false,
+      hp: Math.max(2500, calculatedHp),
+      atk: Math.max(120, calculatedAtk),
+    });
+  };
+
+  // Launch 2D Real-time Arena for Boss Frieza
+  const launchInteractiveBossBattle = () => {
+    setInfoMessage(null);
+    setInteractiveBattle({
+      isOpen: true,
+      enemyName: BOSS.name,
+      isBoss: true,
+      hp: BOSS.hp,
+      atk: BOSS.dmg,
+    });
+  };
+
+  const handleBossFightAuto = () => {
     setInfoMessage(null);
     const res = friezaBossBattle();
     setBattleState({
@@ -65,6 +140,9 @@ export const CombatArena: React.FC = () => {
   const senzuCount = inventory["Senzu Bean"] || 0;
   const potionCount = inventory["Potion"] || 0;
   const megaPotionCount = inventory["Mega Potion"] || 0;
+
+  // Artwork for current boss preview
+  const friezaArt = getArtwork(BOSS.name, 'boss');
 
   return (
     <div className="space-y-6">
@@ -140,183 +218,272 @@ export const CombatArena: React.FC = () => {
       </div>
 
       {healMessage && (
-        <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
-          {healMessage}
+        <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+          <Sparkles className="w-4 h-4 shrink-0" />
+          <span>{healMessage}</span>
         </div>
       )}
 
-      {/* Explore Command Card with the 3 Distinct Options */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/70 to-slate-900 border border-indigo-500/30 p-6 shadow-xl">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
-              <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
-              <span>Current Battlefield: {player.travel}</span>
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                {stats.worldMultiplier}x Reward Multiplier
-              </span>
+      {infoMessage && (
+        <div className="p-3 bg-amber-950/40 border border-amber-500/40 text-amber-300 rounded-xl text-xs flex items-center gap-2">
+          <Info className="w-4 h-4 shrink-0" />
+          <span>{infoMessage}</span>
+        </div>
+      )}
+
+      {/* Real-time 2D Arena Launcher Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-cyan-950/70 via-slate-900/90 to-purple-950/70 border border-cyan-500/40 p-5 shadow-2xl">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-5 relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shadow-lg shadow-cyan-500/30 shrink-0">
+              <Gamepad2 className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-black font-heading text-white mt-1">
-              Explore Patrol Menu
-            </h2>
-            <p className="text-xs text-slate-400 max-w-xl">
-              Choose your action: Engage invaders in mortal combat, disengage safely, or analyze the realm intel.
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading font-black text-lg text-cyan-300 tracking-wide">
+                  2D MULTIVERSE ACTION ARENA
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">
+                  Playable Joystick Mode
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 max-w-lg leading-relaxed">
+                Take direct manual control of your Saiyan! Move with the virtual joystick or WASD, aim at enemies, fire rapid Ki blasts, and unleash devastating Kamehameha waves in real-time.
+              </p>
+            </div>
           </div>
 
-          {/* The 3 Explore Options */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto">
             <button
-              onClick={() => handleExploreChoice('1')}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black font-heading text-sm shadow-lg shadow-orange-500/25 hover:scale-105 active:scale-95 transition cursor-pointer"
+              onClick={launchInteractiveExploreBattle}
+              className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs tracking-wider shadow-lg shadow-cyan-500/30 transition cursor-pointer"
             >
-              <Swords className="w-4 h-4" />
-              <span>1. BATTLE</span>
-            </button>
-
-            <button
-              onClick={() => handleExploreChoice('2')}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-200 font-black font-heading text-sm border border-slate-700 transition cursor-pointer"
-            >
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-              <span>2. RUN AWAY</span>
-            </button>
-
-            <button
-              onClick={() => handleExploreChoice('3')}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-850 hover:bg-slate-800 text-cyan-300 font-black font-heading text-sm border border-cyan-500/30 transition cursor-pointer"
-            >
-              <Info className="w-4 h-4 text-cyan-400" />
-              <span>3. INFO</span>
+              <Crosshair className="w-4 h-4" />
+              <span>PLAY 2D ENEMY ARENA</span>
             </button>
 
             {player.npcStreak >= NPC_STREAK_FOR_BOSS && (
               <button
-                onClick={handleBossFight}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-black font-heading text-sm shadow-lg shadow-red-600/40 animate-bounce transition cursor-pointer border border-red-400"
+                onClick={launchInteractiveBossBattle}
+                className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-slate-950 font-black text-xs tracking-wider shadow-lg shadow-amber-500/30 transition cursor-pointer"
               >
-                <Skull className="w-4 h-4 text-red-200" />
-                <span>CHALLENGE BOSS</span>
+                <Flame className="w-4 h-4 fill-current" />
+                <span>PLAY 2D FRIEZA CLASH</span>
               </button>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Boss Streak Progress */}
-        <div className="mt-5 pt-4 border-t border-slate-800/80">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-slate-300 font-medium flex items-center gap-1.5">
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span>NPC Defeat Streak ({player.npcStreak} / {NPC_STREAK_FOR_BOSS})</span>
-            </span>
-            <span className="text-amber-400 font-semibold">
-              {player.npcStreak >= NPC_STREAK_FOR_BOSS
-                ? "FRIEZA FORCE COMMANDER READY!"
-                : `${NPC_STREAK_FOR_BOSS - player.npcStreak} wins until boss appearance`}
-            </span>
+      {/* Main Patrol & Boss Options Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Card 1: Wilderness Patrol & Explore */}
+        <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2 text-amber-400 font-heading font-bold text-base">
+                <Swords className="w-5 h-5" />
+                <span>Wilderness Patrol: {player.travel}</span>
+              </div>
+              <span className="text-xs font-mono text-cyan-400 font-semibold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">
+                {stats.worldMultiplier}x World Mult
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Scout regional enemies on {player.travel}. Defeat 5 consecutive enemies to unlock the Planetary Emperor Boss challenge!
+            </p>
+
+            {/* Streak Meter */}
+            <div className="bg-slate-950 rounded-2xl p-3 border border-slate-800/80 mb-5">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-slate-400 font-medium">Consecutive Victories:</span>
+                <span className="font-bold text-amber-400 font-mono">
+                  {player.npcStreak} / {NPC_STREAK_FOR_BOSS}
+                </span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-300"
+                  style={{ width: `${streakProgress}%` }}
+                />
+              </div>
+            </div>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                player.npcStreak >= NPC_STREAK_FOR_BOSS
-                  ? "bg-gradient-to-r from-amber-400 via-rose-500 to-red-600 animate-pulse"
-                  : "bg-gradient-to-r from-indigo-500 to-amber-500"
-              }`}
-              style={{ width: `${streakProgress}%` }}
-            />
+
+          {/* Quick Patrol Action Buttons */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={launchInteractiveExploreBattle}
+                className="flex items-center justify-center gap-1.5 p-3 rounded-2xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-500/40 text-xs font-bold transition cursor-pointer"
+              >
+                <Crosshair className="w-4 h-4 text-cyan-300" />
+                <span>Play 2D Arena</span>
+              </button>
+
+              <button
+                onClick={() => handleExploreChoice('1')}
+                className="flex items-center justify-center gap-1.5 p-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition cursor-pointer shadow-md shadow-amber-500/20"
+              >
+                <Swords className="w-4 h-4" />
+                <span>1. Quick Sim</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleExploreChoice('2')}
+                className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition cursor-pointer text-center"
+              >
+                2. Run Away
+              </button>
+              <button
+                onClick={() => handleExploreChoice('3')}
+                className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition cursor-pointer text-center"
+              >
+                3. Check Area
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Frieza Planetary Boss */}
+        <div className={`rounded-3xl border p-6 flex flex-col justify-between relative overflow-hidden transition-all ${
+          player.npcStreak >= NPC_STREAK_FOR_BOSS
+            ? "bg-slate-900/95 border-amber-500/50 shadow-xl shadow-amber-500/10"
+            : "bg-slate-900/40 border-slate-800/60 opacity-85"
+        }`}>
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2 text-rose-400 font-heading font-bold text-base">
+                <Skull className="w-5 h-5 text-rose-500" />
+                <span>Emperor Boss: {BOSS.name}</span>
+              </div>
+              <span className="text-xs font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                {player.npcStreak >= NPC_STREAK_FOR_BOSS ? "UNLOCKED" : "LOCKED"}
+              </span>
+            </div>
+
+            {/* Boss Artwork & Stats Preview */}
+            <div className="flex items-center gap-3.5 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80 mb-4">
+              <div className="w-16 h-16 rounded-xl overflow-hidden border border-rose-500/40 shrink-0 bg-slate-900">
+                <img
+                  src={friezaArt.avatarUrl}
+                  alt={BOSS.name}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="text-xs space-y-1">
+                <div className="font-bold text-white">{BOSS.name}</div>
+                <div className="text-slate-400">HP: <span className="text-emerald-400 font-mono">{BOSS.hp.toLocaleString()}</span></div>
+                <div className="text-slate-400">ATK: <span className="text-rose-400 font-mono">{BOSS.dmg.toLocaleString()}</span></div>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Defeating Frieza grants massive Yens, EXP, Dragon Radar tokens, and unlocks advanced planet travel gates.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={launchInteractiveBossBattle}
+                disabled={player.npcStreak < NPC_STREAK_FOR_BOSS}
+                className="flex items-center justify-center gap-1.5 p-3 rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 disabled:opacity-30 disabled:pointer-events-none text-slate-950 font-black text-xs transition cursor-pointer shadow-md shadow-rose-500/20"
+              >
+                <Crosshair className="w-4 h-4" />
+                <span>2D Boss Clash</span>
+              </button>
+
+              <button
+                onClick={handleBossFightAuto}
+                disabled={player.npcStreak < NPC_STREAK_FOR_BOSS}
+                className="flex items-center justify-center gap-1.5 p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-rose-300 border border-rose-500/40 text-xs font-bold transition cursor-pointer"
+              >
+                <Skull className="w-4 h-4" />
+                <span>Auto Sim</span>
+              </button>
+            </div>
+            {player.npcStreak < NPC_STREAK_FOR_BOSS && (
+              <p className="text-[11px] text-center text-slate-500">
+                Requires {NPC_STREAK_FOR_BOSS - player.npcStreak} more patrol victory to challenge Frieza.
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      {infoMessage && (
-        <div className="p-4 rounded-xl bg-indigo-950/60 border border-indigo-500/40 text-indigo-300 text-xs font-semibold">
-          {infoMessage}
-        </div>
-      )}
-
-      {/* Battle Results Display */}
+      {/* Battle Results Drawer (When Auto-Battle Sim is used) */}
       {battleState && (
-        <div className={`rounded-2xl border p-6 transition-all ${
+        <div className={`p-5 rounded-3xl border ${
           battleState.won
-            ? "bg-gradient-to-b from-emerald-950/40 via-slate-900 to-slate-950 border-emerald-500/40 shadow-xl"
-            : "bg-gradient-to-b from-rose-950/40 via-slate-900 to-slate-950 border-rose-500/40 shadow-xl"
+            ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-200"
+            : "bg-rose-950/20 border-rose-500/30 text-rose-200"
         }`}>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-xl border ${
-                battleState.won
-                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                  : "bg-rose-500/20 text-rose-400 border-rose-500/40"
-              }`}>
-                {battleState.won ? <Award className="w-6 h-6" /> : <Skull className="w-6 h-6" />}
-              </div>
-              <div>
-                <div className="text-xs font-semibold tracking-wider uppercase text-slate-400">
-                  {battleState.isBoss ? "Boss Encounter" : "Combat Result"}
-                </div>
-                <h3 className={`text-xl font-black font-heading ${
-                  battleState.won ? "text-emerald-400" : "text-rose-400"
-                }`}>
-                  {battleState.won ? "VICTORY ACHIEVED" : "DEFEAT IN BATTLE"} vs {battleState.enemyName}
-                </h3>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleExploreChoice('1')}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Battle Next</span>
-              </button>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2 font-heading font-black text-base">
+              {battleState.won ? (
+                <>
+                  <Trophy className="w-5 h-5 text-emerald-400" />
+                  <span className="text-emerald-400">Victory Against {battleState.enemyName}!</span>
+                </>
+              ) : (
+                <>
+                  <Skull className="w-5 h-5 text-rose-400" />
+                  <span className="text-rose-400">Defeated by {battleState.enemyName}</span>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Loot Cards */}
-          {battleState.won && battleState.rewards.length > 0 && (
-            <div className="mb-5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">
-                <Sparkles className="w-4 h-4" />
-                <span>Rewards & Equipment Acquired</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {battleState.rewards.map((rew, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-900 text-amber-200 border border-amber-500/40 shadow-sm"
-                  >
-                    {rew}
-                  </span>
-                ))}
-              </div>
+          {battleState.rewards && battleState.rewards.length > 0 && (
+            <div className="mb-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs flex flex-wrap gap-2">
+              <span className="font-bold text-amber-300">Rewards Acquired:</span>
+              {battleState.rewards.map((r, i) => (
+                <span key={i} className="text-slate-200 font-mono font-semibold">
+                  {r}{i < battleState.rewards.length - 1 ? ' • ' : ''}
+                </span>
+              ))}
             </div>
           )}
 
-          {/* Combat Log */}
-          <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Round Breakdown ({battleState.log.length} Rounds)
-            </div>
-            <div className="max-h-64 overflow-y-auto space-y-1.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800 font-mono text-xs">
-              {battleState.log.map((entry, idx) => (
-                <div
-                  key={idx}
-                  className={`p-1.5 rounded transition ${
-                    entry.isVictory
-                      ? "text-emerald-400 bg-emerald-950/30 font-bold"
-                      : entry.isDefeat
-                      ? "text-rose-400 bg-rose-950/30 font-bold"
-                      : "text-slate-300 hover:bg-slate-900"
-                  }`}
-                >
-                  {entry.text}
-                </div>
-              ))}
-            </div>
+          <div className="bg-slate-950/80 rounded-xl p-3 border border-slate-900 max-h-44 overflow-y-auto font-mono text-[11px] space-y-1">
+            {battleState.log.map((entry, idx) => (
+              <div
+                key={idx}
+                className={entry.playerDamage > 0 ? 'text-cyan-300' : 'text-rose-300'}
+              >
+                {entry.text}
+              </div>
+            ))}
           </div>
         </div>
       )}
+
+      {/* Real-time 2D Arena Combat Modal */}
+      <ArenaCombatModal
+        isOpen={interactiveBattle.isOpen}
+        onClose={() => setInteractiveBattle(prev => ({ ...prev, isOpen: false }))}
+        enemyName={interactiveBattle.enemyName}
+        isBoss={interactiveBattle.isBoss}
+        bossHpMax={interactiveBattle.hp}
+        bossAtkVal={interactiveBattle.atk}
+        onVictory={(rewards: string[]) => {
+          // If boss, reset streak
+          if (interactiveBattle.isBoss) {
+            player.npcStreak = 0;
+          } else {
+            player.npcStreak = (player.npcStreak || 0) + 1;
+          }
+        }}
+        onDefeat={() => {
+          player.npcStreak = 0;
+        }}
+      />
     </div>
   );
 };
