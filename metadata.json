@@ -1,0 +1,7 @@
+{
+  "name": "Dragon Battle RPG",
+  "description": "Dragon Ball inspired RPG with battles, planet exploration, character gacha, fusion, equipment shop, boss summons, clan raids, and Shenron wishes.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
